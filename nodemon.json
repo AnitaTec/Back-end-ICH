@@ -1,0 +1,6 @@
+{
+  "whatch": ["src"],
+  "ext": "ts.js",
+  "ignore": ["dist"],
+  "exec": "tsx src/index"
+}
