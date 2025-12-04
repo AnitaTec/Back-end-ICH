@@ -3,7 +3,7 @@ import { ResponseError } from "../../types/interfaces.js";
 
 const errorHandler = (
   error: ResponseError,
-  _: Request,
+  req: Request,
   res: Response,
   __: NextFunction,
 ): void => {
