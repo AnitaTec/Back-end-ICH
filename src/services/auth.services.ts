@@ -31,7 +31,6 @@ export const registerUser = async (
 
   const existingUsername = await User.findOne({ username: payload.username });
   if (existingUsername) throw HttpError(409, "Username already exists");
-
   const hashedPassword: string = await bcrypt.hash(payload.password, 10);
 
   return User.create({ ...payload, password: hashedPassword });

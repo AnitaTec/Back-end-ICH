@@ -9,6 +9,7 @@ export const registerController = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  //@ts-expect-error
   validateBody(registerSchema, req.body);
   await registerUser(req.body);
   res.status(201).json({
@@ -17,6 +18,7 @@ export const registerController = async (
 };
 
 export const loginController: RequestHandler = async (req, res) => {
+  //@ts-expect-error
   validateBody(loginSchema, req.body);
   const result = await loginUser(req.body);
   res.json(result);
