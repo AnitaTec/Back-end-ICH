@@ -1,4 +1,4 @@
-import { Document, CallbackError } from "mongoose";
+import { Document, CallbackError, Query } from "mongoose";
 
 type MongosseErrorWithStatus = CallbackError & { status?: number };
 
@@ -18,9 +18,6 @@ export const handleSaveError = (
   next();
 };
 
-export const setUpdateSettings = function () {
-  //@ts-expect-error
-  this.options.new = true;
-  //@ts-expect-error
-  this.options.runValidators = true;
+export const setUpdateSettings = function (this: Query<unknown, unknown>) {
+  this.setOptions({ next: true, runValidators: true });
 };
