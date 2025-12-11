@@ -1,20 +1,16 @@
 import User from "../db/models/User.js";
+import { Types } from "mongoose";
 
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 
 import { RegisterPayload, LoginPayload } from "../shemas/auth.schemas.js";
 import HttpError from "../utils/HttpError.js";
 
 import { UserDocument } from "../db/models/User.js";
 
-const { JWT_SECRET } = process.env;
+import { generateToken } from "../utils/jwt.js";
 
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET is not defined in environment variables");
-}
-
-type UserFindResult = UserDocument | null;
+export type UserFindResult = UserDocument | null;
 
 export interface LoginResult {
   accessToken: string;
@@ -23,17 +19,33 @@ export interface LoginResult {
     email: string;
   };
 }
+
+export const creteTokens = (id: Types.ObjectId) => {
+  const accessToken: string = generateToken({ id }, { expiresIn: "15m" });
+  const refreshToken: string = generateToken({ id }, { expiresIn: "7d" });
+
+  return {
+    accessToken,
+    refreshToken,
+  };
+};
+
+//@ts-expect-error
+export const findUser = (query) => User.findOne(query);
+
 export const registerUser = async (
   payload: RegisterPayload,
 ): Promise<UserDocument> => {
-  const user: UserFindResult = await User.findOne({ email: payload.email });
+  const user: UserFindResult = await findUser({ email: payload.email });
   if (user) throw HttpError(409, "Email already exists");
 
   const existingUsername = await User.findOne({ username: payload.username });
   if (existingUsername) throw HttpError(409, "Username already exists");
   const hashedPassword: string = await bcrypt.hash(payload.password, 10);
 
-  return User.create({ ...payload, password: hashedPassword });
+  const created = await User.create({ ...payload, password: hashedPassword });
+
+  return created;
 };
 
 export const loginUser = async (
@@ -43,7 +55,13 @@ export const loginUser = async (
   if (payload.email) query.push({ email: payload.email });
   if (payload.username) query.push({ username: payload.username });
 
-  const user: UserFindResult = await User.findOne({ $or: query });
+  if (!query.length) {
+    throw HttpError(400, "Email or username is required");
+  }
+
+  const user: UserFindResult = await findUser(
+    query.length > 1 ? { $or: query } : query[0],
+  );
 
   if (!user) throw HttpError(401, "User not found");
   const passwordCompare: boolean = await bcrypt.compare(
@@ -52,14 +70,7 @@ export const loginUser = async (
   );
   if (!passwordCompare) throw HttpError(401, "Password invalid");
 
-  const tokenPayload = { id: user._id };
-
-  const accessToken: string = jwt.sign(tokenPayload, JWT_SECRET, {
-    expiresIn: "15m",
-  });
-  const refreshToken: string = jwt.sign(tokenPayload, JWT_SECRET, {
-    expiresIn: "7d",
-  });
+  const { accessToken, refreshToken } = creteTokens(user._id);
 
   await User.findByIdAndUpdate(user._id, { accessToken, refreshToken });
 
@@ -70,4 +81,38 @@ export const loginUser = async (
       email: user.email,
     },
   };
+};
+
+type UpdateUserPayload = {
+  username?: string;
+  avatarURL?: string;
+};
+
+export const updateUserProfile = async (
+  id: Types.ObjectId,
+  payload: UpdateUserPayload,
+): Promise<UserDocument> => {
+  const updateData: UpdateUserPayload = {};
+
+  if (payload.username) {
+    const existing = await User.findOne({
+      username: payload.username,
+      _id: { $ne: id },
+    });
+    if (existing) throw HttpError(409, "Username already exists");
+
+    updateData.username = payload.username;
+  }
+
+  if (payload.avatarURL) {
+    updateData.avatarURL = payload.avatarURL;
+  }
+
+  const updated = await User.findByIdAndUpdate(id, updateData, {
+    new: true,
+  });
+
+  if (!updated) throw HttpError(404, "User not found");
+
+  return updated;
 };

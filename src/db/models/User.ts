@@ -11,6 +11,8 @@ export interface UserDocument extends Document {
   refreshToken: string;
   createdAt: Date;
   updatedAt: Date;
+
+  avatarURL?: string;
 }
 
 const userSchema = new Schema<UserDocument>(
@@ -36,13 +38,14 @@ const userSchema = new Schema<UserDocument>(
     },
     accessToken: { type: String },
     refreshToken: { type: String },
+
+    avatarURL: { type: String },
   },
   { versionKey: false, timestamps: true },
 );
 
 userSchema.post("save", handleSaveError);
 userSchema.pre("findOneAndUpdate", setUpdateSettings);
-
 userSchema.post("findOneAndUpdate", handleSaveError);
 
 const User = model<UserDocument>("user", userSchema);
