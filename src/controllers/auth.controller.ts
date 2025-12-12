@@ -11,6 +11,7 @@ import validateBody from "../utils/validateBody.js";
 import { registerSchema, loginSchema } from "../shemas/auth.schemas.js";
 import creteTokens from "../utils/creteTokens.js";
 import { AuthRequest } from "../types/interfaces.js";
+import User from "../db/models/User.js"; // 👈 чтобы обновлять токены в базе
 
 export const registerController = async (
   req: Request,
@@ -26,11 +27,16 @@ export const loginController: RequestHandler = async (req, res) => {
   const result = await loginUser(req.body);
   res.json(result);
 };
+
 export const getCfurrentController: RequestHandler = async (req, res) => {
   const authReq = req as AuthRequest;
-  const user = authReq.user!;
+  const user = authReq.user!; // authenticate гарантирует, что user есть
 
   const { accessToken, refreshToken } = creteTokens(user._id);
+
+  // 👇 ОБНОВЛЯЕМ токены в базе, чтобы refresh мог найти пользователя по refreshToken
+  await User.findByIdAndUpdate(user._id, { accessToken, refreshToken });
+
   res.json({
     accessToken,
     refreshToken,
@@ -90,6 +96,7 @@ export const updateProfileController: RequestHandler = async (req, res) => {
 
 export const refreshController: RequestHandler = async (req, res) => {
   const result = await refreshUser(req.body.refreshToken);
+  res.json(result); // 👈 отдаем новые токены и юзера на фронт
 };
 
 export const logoutController: RequestHandler = async (req, res) => {
