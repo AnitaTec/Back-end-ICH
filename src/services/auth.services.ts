@@ -16,10 +16,20 @@ export interface LoginResult {
 }
 
 type UserQuery =
-  | Partial<{ email: string; username: string; refreshToken: string }>
+  | Partial<{
+      _id?: string;
+      email: string;
+      username: string;
+      refreshToken: string;
+    }>
   | {
       $or: Array<
-        Partial<{ email: string; username: string; refreshToken: string }>
+        Partial<{
+          _id?: string;
+          email: string;
+          username: string;
+          refreshToken: string;
+        }>
       >;
     };
 

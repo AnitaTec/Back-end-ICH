@@ -1,6 +1,6 @@
-import { UserDocument } from "../db/models/User.ts";
+import type { UserDocument } from "../../db/models/User";
 
-declare module "express-server-static-core" {
+declare module "express-serve-static-core" {
   interface Request {
     user?: UserDocument;
   }
