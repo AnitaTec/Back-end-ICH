@@ -88,13 +88,16 @@ export const refreshUser = async (
 ): Promise<LoginResult> => {
   const { error } = verifyToken(refreshTokenOld);
   if (error) throw HttpError(401, error.message);
+  // console.log(refreshTokenOld);
   const user: UserFindResult = await findUser({
     refreshToken: refreshTokenOld,
   });
+
   if (!user) throw HttpError(401, "User not found");
 
   const { accessToken, refreshToken } = creteTokens(user._id);
   await User.findByIdAndUpdate(user._id, { accessToken, refreshToken });
+  // console.log(refreshToken);
   return {
     accessToken,
     refreshToken,

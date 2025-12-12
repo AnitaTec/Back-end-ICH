@@ -26,20 +26,21 @@ export const loginController: RequestHandler = async (req, res) => {
   const result = await loginUser(req.body);
   res.json(result);
 };
-
 export const getCfurrentController: RequestHandler = async (req, res) => {
   const authReq = req as AuthRequest;
-  const { accessToken, refreshToken } = creteTokens(authReq.user._id);
+  const user = authReq.user!;
+
+  const { accessToken, refreshToken } = creteTokens(user._id);
   res.json({
     accessToken,
     refreshToken,
     user: {
-      email: authReq.user.email,
-      fullname: authReq.user.fullName,
-      username: authReq.user.username,
-      avatarURL: authReq.user.avatarURL,
-      about: authReq.user.about || "",
-      website: authReq.user.website || "",
+      email: user.email,
+      fullname: user.fullName,
+      username: user.username,
+      avatarURL: user.avatarURL,
+      about: user.about || "",
+      website: user.website || "",
     },
   });
 };
