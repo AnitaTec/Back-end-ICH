@@ -6,5 +6,5 @@ export interface ResponseError extends Error {
   status: number;
 }
 export interface AuthRequest extends Request {
-  user: UserDocument;
+  user?: UserDocument;
 }

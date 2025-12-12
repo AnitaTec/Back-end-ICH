@@ -17,7 +17,7 @@ export interface LoginResult {
 
 type UserQuery =
   | Partial<{
-      _id?: string;
+      _id?: string | Types.ObjectId;
       email: string;
       username: string;
       refreshToken: string;

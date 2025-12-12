@@ -20,7 +20,7 @@ const authenticate: RequestHandler = async (req, res, next) => {
   if (error) throw HttpError(401, error.message);
   if (!payload) throw HttpError(401, "JWT payload not found");
 
-  const user: UserFindResult = await findUser({ _id: payload.id });
+  const user: UserFindResult = await findUser({ _id: payload.id.toString() });
   if (!user) throw HttpError(401, "User not found");
 
   req.user = user;

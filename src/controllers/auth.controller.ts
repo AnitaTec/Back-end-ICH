@@ -27,21 +27,19 @@ export const loginController: RequestHandler = async (req, res) => {
   res.json(result);
 };
 
-export const getCfurrentController = async (
-  req: AuthRequest,
-  res: Response,
-) => {
-  const { accessToken, refreshToken } = creteTokens(req.user._id);
+export const getCfurrentController: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  const { accessToken, refreshToken } = creteTokens(authReq.user._id);
   res.json({
     accessToken,
     refreshToken,
     user: {
-      email: req.user.email,
-      fullname: req.user.fullName,
-      username: req.user.username,
-      avatarURL: req.user.avatarURL,
-      about: req.user.about || "",
-      website: req.user.website || "",
+      email: authReq.user.email,
+      fullname: authReq.user.fullName,
+      username: authReq.user.username,
+      avatarURL: authReq.user.avatarURL,
+      about: authReq.user.about || "",
+      website: authReq.user.website || "",
     },
   });
 };
@@ -69,7 +67,7 @@ export const updateProfileController: RequestHandler = async (req, res) => {
     if (about !== undefined) payload.about = about;
     if (website !== undefined) payload.website = website;
 
-    const updatedUser = await updateUserProfile(authReq.user._id, payload);
+    const updatedUser = await updateUserProfile(authReq.user!._id, payload);
 
     res.json({
       user: {
@@ -93,8 +91,10 @@ export const refreshController: RequestHandler = async (req, res) => {
   const result = await refreshUser(req.body.refreshToken);
 };
 
-export const logoutController = async (req: AuthRequest, res: Response) => {
-  await logoutUser(req.user);
+export const logoutController: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+
+  await logoutUser(authReq.user!);
   res.json({
     message: "Logout successfuly",
   });
