@@ -1,4 +1,4 @@
-import { ZodSchema } from "zod/v3";
+import { ZodSchema } from "zod";
 
 import HttpError from "./HttpError.js";
 

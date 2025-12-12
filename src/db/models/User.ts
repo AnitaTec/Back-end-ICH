@@ -13,6 +13,8 @@ export interface UserDocument extends Document {
   updatedAt: Date;
 
   avatarURL?: string;
+  about?: string;
+  website?: string;
 }
 
 const userSchema = new Schema<UserDocument>(
@@ -40,6 +42,8 @@ const userSchema = new Schema<UserDocument>(
     refreshToken: { type: String },
 
     avatarURL: { type: String },
+    about: { type: String, default: "" },
+    website: { type: String, default: "" },
   },
   { versionKey: false, timestamps: true },
 );
