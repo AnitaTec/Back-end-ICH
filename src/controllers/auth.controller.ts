@@ -287,3 +287,17 @@ export const getUserByUsernameController: RequestHandler<{
 
   res.json(found);
 };
+
+export const searchUsersController: RequestHandler = async (req, res) => {
+  const q = String(req.query.q || "").trim();
+
+  if (!q) return res.json([]);
+
+  const users = await User.find({
+    username: { $regex: q, $options: "i" },
+  })
+    .select("username avatarURL")
+    .limit(20);
+
+  return res.json(users);
+};
