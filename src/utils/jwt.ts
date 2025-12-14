@@ -5,10 +5,6 @@ interface JWTPayload {
   id: Types.ObjectId;
 }
 
-// interface JWTPayload {
-//   id: string;
-// }
-
 type JWTSettings = SignOptions | undefined;
 
 interface VertifyTokenResult {

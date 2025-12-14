@@ -5,6 +5,7 @@ import { RegisterPayload, LoginPayload } from "../shemas/auth.schemas.js";
 import HttpError from "../utils/HttpError.js";
 import { verifyToken } from "../utils/jwt.js";
 import creteTokens from "../utils/creteTokens.js";
+
 export type UserFindResult = UserDocument | null;
 
 export interface LoginResult {
@@ -45,6 +46,7 @@ export const registerUser = async (
 
   const existingUsername = await User.findOne({ username: payload.username });
   if (existingUsername) throw HttpError(409, "Username already exists");
+
   const hashedPassword: string = await bcrypt.hash(payload.password, 10);
 
   const created = await User.create({ ...payload, password: hashedPassword });
@@ -56,6 +58,7 @@ export const loginUser = async (
   payload: LoginPayload,
 ): Promise<LoginResult> => {
   const query: Array<Partial<{ email: string; username: string }>> = [];
+
   if (payload.email) query.push({ email: payload.email });
   if (payload.username) query.push({ username: payload.username });
 
@@ -66,6 +69,7 @@ export const loginUser = async (
   );
 
   if (!user) throw HttpError(401, "User not found");
+
   const passwordCompare: boolean = await bcrypt.compare(
     payload.password,
     user.password,
@@ -88,7 +92,6 @@ export const refreshUser = async (
 ): Promise<LoginResult> => {
   const { error } = verifyToken(refreshTokenOld);
   if (error) throw HttpError(401, error.message);
-  // console.log(refreshTokenOld);
   const user: UserFindResult = await findUser({
     refreshToken: refreshTokenOld,
   });
@@ -97,7 +100,7 @@ export const refreshUser = async (
 
   const { accessToken, refreshToken } = creteTokens(user._id);
   await User.findByIdAndUpdate(user._id, { accessToken, refreshToken });
-  // console.log(refreshToken);
+
   return {
     accessToken,
     refreshToken,
@@ -136,6 +139,7 @@ export const updateUserProfile = async (
   if (payload.about !== undefined) {
     updateData.about = payload.about;
   }
+
   if (payload.website !== undefined) {
     updateData.website = payload.website;
   }

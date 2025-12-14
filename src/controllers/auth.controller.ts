@@ -6,12 +6,37 @@ import {
   refreshUser,
   logoutUser,
 } from "../services/auth.services.js";
-
 import validateBody from "../utils/validateBody.js";
 import { registerSchema, loginSchema } from "../shemas/auth.schemas.js";
 import creteTokens from "../utils/creteTokens.js";
 import { AuthRequest } from "../types/interfaces.js";
-import User from "../db/models/User.js"; // 👈 чтобы обновлять токены в базе
+
+import User from "../db/models/User.js";
+import Conversation from "../db/models/Conversation.js";
+import Message from "../db/models/Message.js";
+
+import { Types } from "mongoose";
+import type { Document, Model } from "mongoose";
+
+type MessageDocument = Document<Types.ObjectId> & {
+  conversationId: Types.ObjectId;
+  sender: Types.ObjectId;
+  text: string;
+  readBy: Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type ConversationDocument = Document<Types.ObjectId> & {
+  participants: Types.ObjectId[];
+  lastMessage?: Types.ObjectId | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const MessageModel = Message as unknown as Model<MessageDocument>;
+const ConversationModel =
+  Conversation as unknown as Model<ConversationDocument>;
 
 export const registerController = async (
   req: Request,
@@ -30,11 +55,8 @@ export const loginController: RequestHandler = async (req, res) => {
 
 export const getCfurrentController: RequestHandler = async (req, res) => {
   const authReq = req as AuthRequest;
-  const user = authReq.user!; // authenticate гарантирует, что user есть
-
+  const user = authReq.user!;
   const { accessToken, refreshToken } = creteTokens(user._id);
-
-  // 👇 ОБНОВЛЯЕМ токены в базе, чтобы refresh мог найти пользователя по refreshToken
   await User.findByIdAndUpdate(user._id, { accessToken, refreshToken });
 
   res.json({
@@ -96,14 +118,172 @@ export const updateProfileController: RequestHandler = async (req, res) => {
 
 export const refreshController: RequestHandler = async (req, res) => {
   const result = await refreshUser(req.body.refreshToken);
-  res.json(result); // 👈 отдаем новые токены и юзера на фронт
+  res.json(result);
 };
 
-export const logoutController: RequestHandler = async (req, res) => {
-  const authReq = req as AuthRequest;
+export const logoutController: RequestHandler = async (
+  req: AuthRequest,
+  res: Response,
+) => {
+  await logoutUser(req.user!);
 
-  await logoutUser(authReq.user!);
   res.json({
     message: "Logout successfuly",
   });
+};
+
+export const getConversationsController: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  const userId = authReq.user!._id;
+
+  const conversations = await ConversationModel.find({ participants: userId })
+    .populate("participants", "username email avatarURL fullName")
+    .populate({
+      path: "lastMessage",
+      populate: { path: "sender", select: "username email avatarURL" },
+    })
+    .sort({ updatedAt: -1 });
+
+  res.json(conversations);
+};
+
+export const getConversationMessagesController: RequestHandler = async (
+  req,
+  res,
+) => {
+  const authReq = req as AuthRequest;
+  const userId = authReq.user!._id;
+  const { id } = req.params;
+
+  const conv = await ConversationModel.findById(id);
+  if (!conv) {
+    return res.status(404).json({ message: "Conversation not found" });
+  }
+
+  const participants = conv.participants as unknown as Types.ObjectId[];
+  const isMember = participants.some((p) => String(p) === String(userId));
+  if (!isMember) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const messages = await MessageModel.find({
+    conversationId: new Types.ObjectId(String(id)),
+  })
+    .populate("sender", "username email avatarURL")
+    .sort({ createdAt: 1 });
+
+  res.json(messages);
+};
+
+export const sendMessageController: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  const userId = authReq.user!._id;
+  const { id } = req.params;
+  const { text } = req.body as { text?: string };
+
+  if (!text || !text.trim()) {
+    return res.status(400).json({ message: "Text is required" });
+  }
+
+  const conv = await ConversationModel.findById(id);
+  if (!conv) {
+    return res.status(404).json({ message: "Conversation not found" });
+  }
+
+  const participants = conv.participants as unknown as Types.ObjectId[];
+  const isMember = participants.some((p) => String(p) === String(userId));
+  if (!isMember) {
+    return res.status(403).json({ message: "Access denied" });
+  }
+
+  const conversationObjectId = new Types.ObjectId(String(id));
+  const senderObjectId = new Types.ObjectId(String(userId));
+
+  const msg = await MessageModel.create({
+    conversationId: conversationObjectId,
+    sender: senderObjectId,
+    text: text.trim(),
+    readBy: [senderObjectId],
+  });
+
+  await ConversationModel.findByIdAndUpdate(
+    id,
+    { lastMessage: msg._id },
+    { new: true },
+  );
+
+  const fullMsg = await MessageModel.findById(msg._id).populate(
+    "sender",
+    "username email avatarURL",
+  );
+
+  return res.status(201).json(fullMsg);
+};
+
+export const createConversationController: RequestHandler = async (
+  req,
+  res,
+) => {
+  const authReq = req as AuthRequest;
+  const userId = authReq.user!._id;
+
+  const { participantId } = req.body as { participantId?: string };
+
+  if (!participantId) {
+    return res.status(400).json({ message: "participantId is required" });
+  }
+
+  if (String(participantId) === String(userId)) {
+    return res.status(400).json({ message: "You cannot chat with yourself" });
+  }
+
+  const myObjectId = new Types.ObjectId(String(userId));
+  const participantObjectId = new Types.ObjectId(String(participantId));
+
+  const otherUser = await User.findById(participantObjectId);
+  if (!otherUser) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  let conv = await ConversationModel.findOne({
+    participants: { $all: [myObjectId, participantObjectId] },
+  })
+    .populate("participants", "username email avatarURL fullName")
+    .populate({
+      path: "lastMessage",
+      populate: { path: "sender", select: "username email avatarURL" },
+    });
+
+  if (!conv) {
+    const created = await ConversationModel.create({
+      participants: [myObjectId, participantObjectId],
+    });
+
+    conv = await ConversationModel.findById(created._id)
+      .populate("participants", "username email avatarURL fullName")
+      .populate({
+        path: "lastMessage",
+        populate: { path: "sender", select: "username email avatarURL" },
+      });
+  }
+
+  return res.status(201).json(conv);
+};
+
+export const getUserByUsernameController: RequestHandler<{
+  username: string;
+}> = async (req, res) => {
+  const username = req.params.username;
+
+  if (!username) {
+    return res.status(400).json({ message: "Username is required" });
+  }
+
+  const found = await User.findOne({ username }).select(
+    "username email fullName avatarURL about website createdAt",
+  );
+
+  if (!found) return res.status(404).json({ message: "User not found" });
+
+  res.json(found);
 };
