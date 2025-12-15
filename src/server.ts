@@ -8,6 +8,7 @@ import autRouter from "./routers/auth.router.js";
 import messagesRouter from "./routers/messages.router.js";
 import usersRouter from "./routers/users.router.js";
 import postsRouter from "./routers/posts.router.js";
+import followRouter from "./routers/follow.router.js";
 
 import notFoundHandler from "./db/middlewares/notFoundHandler.js";
 import errorHandler from "./db/middlewares/errorHandler.js";
@@ -31,6 +32,7 @@ const startServer = (): void => {
   app.use("/api/messages", messagesRouter);
   app.use("/api/users", usersRouter);
   app.use("/api/posts", postsRouter);
+  app.use("/api/follow", followRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

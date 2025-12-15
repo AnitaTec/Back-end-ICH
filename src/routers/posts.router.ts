@@ -5,13 +5,19 @@ import {
   getMyPostsController,
   getPostsByUsernameController,
   getExplorePostsController,
+  getFeedPostsController,
+  getPostByIdController,
 } from "../controllers/posts.controller.js";
 
 const postsRouter = Router();
 
-postsRouter.get("/explore", authenticate, getExplorePostsController); // ✅ первым
+postsRouter.get("/feed", authenticate, getFeedPostsController);
+postsRouter.get("/explore", authenticate, getExplorePostsController);
+
 postsRouter.post("/", authenticate, createPostController);
 postsRouter.get("/me", authenticate, getMyPostsController);
 postsRouter.get("/user/:username", authenticate, getPostsByUsernameController);
+
+postsRouter.get("/:id", authenticate, getPostByIdController);
 
 export default postsRouter;

@@ -1,4 +1,5 @@
 import { RequestHandler } from "express";
+import { Types } from "mongoose";
 import User from "../db/models/User.js";
 import Posts from "../db/models/Posts.js";
 import { AuthRequest } from "../types/interfaces.js";
@@ -88,4 +89,61 @@ export const getExplorePostsController: RequestHandler = async (req, res) => {
   ]);
 
   return res.json(posts);
+};
+
+export const getFeedPostsController: RequestHandler = async (req, res) => {
+  const limitRaw = Number(req.query.limit || 24);
+  const limit = Number.isFinite(limitRaw)
+    ? Math.min(Math.max(limitRaw, 6), 60)
+    : 24;
+
+  const usersCollection = User.collection.name;
+
+  const posts = await Posts.aggregate([
+    { $match: { image: { $exists: true, $ne: "" } } },
+    { $sample: { size: limit } },
+    {
+      $lookup: {
+        from: usersCollection,
+        localField: "owner",
+        foreignField: "_id",
+        as: "owner",
+      },
+    },
+    { $unwind: { path: "$owner", preserveNullAndEmptyArrays: true } },
+    {
+      $project: {
+        image: 1,
+        caption: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        owner: {
+          _id: 1,
+          username: 1,
+          email: 1,
+          avatarURL: 1,
+          fullName: 1,
+        },
+      },
+    },
+  ]);
+
+  return res.json(posts);
+};
+
+export const getPostByIdController: RequestHandler = async (req, res) => {
+  const { id } = req.params as { id: string };
+
+  if (!id || !Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "invalid post id" });
+  }
+
+  const post = await Posts.findById(id).populate(
+    "owner",
+    "username email avatarURL fullName",
+  );
+
+  if (!post) return res.status(404).json({ message: "Post not found" });
+
+  return res.json(post);
 };
