@@ -7,6 +7,7 @@ import {
   getExplorePostsController,
   getFeedPostsController,
   getPostByIdController,
+  deletePostController,
 } from "../controllers/posts.controller.js";
 
 const postsRouter = Router();
@@ -18,6 +19,7 @@ postsRouter.post("/", authenticate, createPostController);
 postsRouter.get("/me", authenticate, getMyPostsController);
 postsRouter.get("/user/:username", authenticate, getPostsByUsernameController);
 
+postsRouter.delete("/:id", authenticate, deletePostController);
 postsRouter.get("/:id", authenticate, getPostByIdController);
 
 export default postsRouter;

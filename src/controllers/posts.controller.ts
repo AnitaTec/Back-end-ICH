@@ -147,3 +147,31 @@ export const getPostByIdController: RequestHandler = async (req, res) => {
 
   return res.json(post);
 };
+
+export const deletePostController: RequestHandler = async (req, res) => {
+  const authReq = req as AuthRequest;
+  const userId = authReq.user?._id;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Not authorized" });
+  }
+
+  const { id } = req.params as { id: string };
+
+  if (!id || !Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "invalid post id" });
+  }
+
+  const post = await Posts.findById(id).select("_id owner");
+  if (!post) {
+    return res.status(404).json({ message: "Post not found" });
+  }
+
+  if (String(post.owner) !== String(userId)) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  await Posts.deleteOne({ _id: post._id });
+
+  return res.json({ ok: true, id: String(post._id) });
+};
