@@ -30,7 +30,7 @@ type PostDocLike = {
   comments?: Array<PostComment>;
   createdAt?: Date;
   updatedAt?: Date;
-  toObject: () => unknown;
+  toObject: () => Record<string, unknown>;
 };
 
 const strId = (v: unknown) => String(v ?? "");
@@ -69,7 +69,9 @@ export const getPostViewController: RequestHandler = async (req, res) => {
   const likesArr = Array.isArray(post.likes) ? post.likes : [];
   const isLiked = likesArr.some((x) => strId(x) === String(userId));
 
-  return res.json({ ...post.toObject(), isLiked });
+  const postObj = post.toObject();
+
+  return res.json({ ...postObj, isLiked });
 };
 
 export const likePostController: RequestHandler = async (req, res) => {
