@@ -15,6 +15,9 @@ export interface UserDocument extends Document {
   avatarURL?: string;
   about?: string;
   website?: string;
+
+  resetPasswordTokenHash?: string | null;
+  resetPasswordExpiresAt?: Date | null;
 }
 
 const userSchema = new Schema<UserDocument>(
@@ -44,6 +47,9 @@ const userSchema = new Schema<UserDocument>(
     avatarURL: { type: String },
     about: { type: String, default: "" },
     website: { type: String, default: "" },
+
+    resetPasswordTokenHash: { type: String, default: null },
+    resetPasswordExpiresAt: { type: Date, default: null },
   },
   { versionKey: false, timestamps: true },
 );

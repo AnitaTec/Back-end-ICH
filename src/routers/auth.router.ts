@@ -10,10 +10,19 @@ import {
 
 import authenticate from "../db/middlewares/authenticate.js";
 
+import {
+  resetRequestController,
+  resetConfirmController,
+} from "../controllers/passwordReset.controller.js";
+
 const authRouter = Router();
 
 authRouter.post("/register", registerController);
 authRouter.post("/login", loginController);
+
+authRouter.post("/reset/request", resetRequestController);
+authRouter.post("/reset/confirm", resetConfirmController);
+
 authRouter.get("/current", authenticate, getCfurrentController);
 authRouter.patch("/profile", authenticate, updateProfileController);
 authRouter.post("/refresh", refreshController);
